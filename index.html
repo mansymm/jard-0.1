@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>جرد المخزون الاحترافي</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- مكتبات Excel والباركود بنسخ ثابتة من cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- ========================================================================
+       الهيدر العلوي الموحد (خفيف ومرتب)
+       ======================================================================== -->
+  <header class="app-header no-print">
+    <div class="header-top">
+      <div class="brand-area">
+        <span class="brand-icon">📦</span>
+        <div>
+          <h1 class="brand-title" id="headerCompanyTitle">جرد المخزون</h1>
+          <span class="brand-sub" id="headerInvSubtitle">الجرد النشط</span>
+        </div>
+      </div>
+      <button type="button" id="undoBtn" class="btn-icon-pill" onclick="undoLastAction()" disabled title="تراجع عن آخر تعديل">
+        ↩ تراجع
+      </button>
+    </div>
+
+    <!-- شريط الإحصائيات المصغر -->
+    <div class="mini-stats-bar">
+      <div class="m-stat">
+        <span class="m-val" id="statTotal">0</span>
+        <span class="m-lbl">الكل</span>
+      </div>
+      <div class="m-stat">
+        <span class="m-val text-primary" id="statCounted">0</span>
+        <span class="m-lbl">مجرود</span>
+      </div>
+      <div class="m-stat">
+        <span class="m-val text-warning" id="statDiff">0</span>
+        <span class="m-lbl">فروقات</span>
+      </div>
+      <div class="m-stat">
+        <span class="m-val text-muted" id="statRemaining">0</span>
+        <span class="m-lbl">متبقي</span>
+      </div>
+      <div class="m-progress-box">
+        <span class="m-pct" id="overallProgressText">0%</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="overallProgressBar"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       المحتوى الرئيسي المقسم إلى 4 تبويبات (Sections)
+       ======================================================================== -->
+  <main class="main-viewport no-print">
+
+    <!-- ======================================================================
+         التبويب 1: شاشة الجرد اليومي (Count Tab)
+         ====================================================================== -->
+    <section id="tab-count" class="tab-view active">
+      <!-- شريط البحث والباركود -->
+      <div class="search-bar-card">
+        <div class="search-input-group">
+          <input type="text" id="searchInput" placeholder="🔍 ابحث بكود الموديل..." autocomplete="off" />
+          <button type="button" class="btn-scan" onclick="openBarcodeScanner()" aria-label="مسح الباركود">
+            📷 باركود
+          </button>
+        </div>
+
+        <!-- فلاتر الحالة الأفقية -->
+        <div class="chips-row" id="statusFilterGroup">
+          <button type="button" class="chip active" data-status="all">الكل</button>
+          <button type="button" class="chip" data-status="uncounted">لم يُجرد</button>
+          <button type="button" class="chip" data-status="diff">فيه فرق</button>
+          <button type="button" class="chip" data-status="match">مطابق</button>
+        </div>
+
+        <!-- فلتر المصنع والترتيب -->
+        <div class="grid-2">
+          <select id="factoryFilter" aria-label="فلتر المصنع">
+            <option value="all">🏭 كل المصانع</option>
+          </select>
+          <select id="sortSelect" aria-label="ترتيب القائمة">
+            <option value="default">🔃 الترتيب الافتراضي</option>
+            <option value="uncounted_first">⏳ غير المجرود أولاً</option>
+            <option value="biggest_diff">⚠️ الأكبر فرقاً</option>
+            <option value="code_asc">🔤 حسب كود الموديل</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- قائمة كروت الأصناف -->
+      <div id="itemsContainer" class="items-list"></div>
+
+      <div id="loadMoreWrap" class="load-more-box" style="display:none;">
+        <button type="button" id="loadMoreBtn" class="btn btn-secondary btn-block" onclick="loadMoreItems()">
+          عرض المزيد...
+        </button>
+      </div>
+
+      <!-- زر عائم لإضافة صنف غير موجود بالسيستم -->
+      <button type="button" class="fab-add" onclick="openModal('addManualModal')" title="إضافة صنف يدوي">
+        ➕ صنف جديد
+      </button>
+    </section>
+
+    <!-- ======================================================================
+         التبويب 2: شاشة التقارير والطباعة (Reports Tab)
+         ====================================================================== -->
+    <section id="tab-reports" class="tab-view">
+      <!-- بطاقة الطباعة A4 -->
+      <div class="card-section">
+        <div class="card-section-title">🖨️ الطباعة المباشرة على ورق A4</div>
+        <p class="section-desc">طباعة كشف رسمي منسق مع ترويسة المكتب وأرقام الفواتير وخانات التوقيع.</p>
+        <div class="grid-2">
+          <button type="button" class="btn btn-primary" onclick="printA4Report('all')">
+            🖨️ التقرير الكامل A4
+          </button>
+          <button type="button" class="btn btn-accent" onclick="printA4Report('diff')">
+            ⚠️ الفروقات فقط A4
+          </button>
+        </div>
+      </div>
+
+      <!-- بطاقة تصدير Excel -->
+      <div class="card-section">
+        <div class="card-section-title">📊 استخراج ملفات Excel احترافية</div>
+        <p class="section-desc">ملفات إكسل من اليمين لليسار مع تلوين العجز والزيادة وتجميد العناوين.</p>
+        <div class="stack-gap">
+          <button type="button" class="btn btn-primary btn-block" onclick="exportMainExcelReport(false)">
+            📥 تحميل تقرير Excel الكامل (4 شيتات)
+          </button>
+
+          <div class="factory-export-box">
+            <label class="field-label" for="reportFactorySelect">تصدير تقرير لمصنع محدد:</label>
+            <div class="search-input-group">
+              <select id="reportFactorySelect">
+                <option value="all">اختر المصنع...</option>
+              </select>
+              <button type="button" id="exportSelectedFactoryBtn" class="btn btn-accent" onclick="exportSelectedFactoryFromReports()" disabled>
+                تصدير
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-secondary btn-block" onclick="exportPerFactoryExcel()">
+            📑 ملف Excel بشيت مستقل لكل مصنع + كل الفروقات
+          </button>
+
+          <button type="button" class="btn btn-secondary btn-block" onclick="copyWhatsAppSummary()">
+            📋 نسخ ملخص الجرد لمشاركته واتساب
+          </button>
+        </div>
+      </div>
+
+      <!-- بطاقة نسبة إنجاز كل مصنع -->
+      <div class="card-section">
+        <div class="card-section-title">🏭 متابعة إنجاز المصانع</div>
+        <div id="factoryProgressContainer" class="factory-progress-list"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         التبويب 3: شاشة سجل الجرود السابقة (History Tab)
+         ====================================================================== -->
+    <section id="tab-history" class="tab-view">
+      <div class="card-section">
+        <div class="card-section-header-row">
+          <div>
+            <div class="card-section-title" style="margin:0;">🗂️ سجل الجرود المحفوظة</div>
+            <small class="section-desc" style="margin:0;">يُحفظ الجرد تلقائياً هنا عند رفع ملف جديد حتى لا يضيع عملك.</small>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="archiveCurrentInventoryManual()">
+            📌 حفظ الحالي
+          </button>
+        </div>
+      </div>
+
+      <div id="historyListContainer" class="history-list"></div>
+    </section>
+
+    <!-- ======================================================================
+         التبويب 4: شاشة الإعدادات والبيانات (Settings Tab)
+         ====================================================================== -->
+    <section id="tab-settings" class="tab-view">
+      <!-- 1. استيراد ملف جديد -->
+      <div class="card-section">
+        <div class="card-section-title">📥 استيراد جرد السيستم (Excel / CSV)</div>
+        <p class="section-desc">ارفع ملف السيستم وسيتم أرشفة الجرد الحالي تلقائياً في السجل.</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+      </div>
+
+      <!-- 2. بيانات الجرد والفواتير -->
+      <div class="card-section">
+        <div class="card-section-title">🧾 بيانات الجرد وأرقام الفواتير</div>
+        <div class="form-group">
+          <label class="field-label" for="inventoryTitle">عنوان الجرد الحالي:</label>
+          <input type="text" id="inventoryTitle" placeholder="مثال: جرد مخزن المصنع - نوفمبر" />
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="inventoryDate">تاريخ الجرد:</label>
+          <input type="date" id="inventoryDate" />
+          <label class="checkbox-row">
+            <input type="checkbox" id="includeDateInReport" checked />
+            <span>إظهار التاريخ في التقارير المطبوعة والإكسل</span>
+          </label>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="field-label" for="invPurchase">آخر فاتورة مشتريات:</label>
+            <input type="text" id="invPurchase" placeholder="رقم الفاتورة" />
+          </div>
+          <div class="form-group">
+            <label class="field-label" for="invPurchaseReturn">آخر مردود مشتريات:</label>
+            <input type="text" id="invPurchaseReturn" placeholder="رقم الفاتورة" />
+          </div>
+          <div class="form-group">
+            <label class="field-label" for="invSales">آخر فاتورة مبيعات:</label>
+            <input type="text" id="invSales" placeholder="رقم الفاتورة" />
+          </div>
+          <div class="form-group">
+            <label class="field-label" for="invSalesReturn">آخر مردود مبيعات:</label>
+            <input type="text" id="invSalesReturn" placeholder="رقم الفاتورة" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. تخصيص المكتب والمصنع وتفضيلات الجرد -->
+      <div class="card-section">
+        <div class="card-section-title">🏢 تخصيص المكتب وتفضيلات الجرد</div>
+        <div class="form-group">
+          <label class="field-label" for="settingCompanyName">اسم المكتب أو المصنع (يظهر أعلى ورقة A4):</label>
+          <input type="text" id="settingCompanyName" placeholder="مثال: مكتب ومصنع عبوات..." />
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="settingOutlierThreshold">نسبة التنبيه عند وجود فرق كبير (%):</label>
+          <select id="settingOutlierThreshold">
+            <option value="25">تنبيه إذا زاد الفرق عن 25%</option>
+            <option value="50" selected>تنبيه إذا زاد الفرق عن 50% (افتراضي)</option>
+            <option value="100">تنبيه إذا زاد الفرق عن 100%</option>
+            <option value="0">إيقاف التنبيه</option>
+          </select>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="settingVibrate" checked />
+          <span>اهتزاز خفيف عند مسح الباركود أو المطابقة السريعة</span>
+        </label>
+      </div>
+
+      <!-- 4. النسخ الاحتياطي وإعادة الضبط -->
+      <div class="card-section">
+        <div class="card-section-title">💾 النسخ الاحتياطي وإدارة البيانات</div>
+        <div class="grid-2" style="margin-bottom:10px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="exportFullBackupJSON()">
+            📤 تصدير نسخة JSON
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('backupInput').click()">
+            📥 استعادة نسخة JSON
+          </button>
+          <input type="file" id="backupInput" accept=".json" style="display:none" />
+        </div>
+
+        <button type="button" class="btn btn-danger btn-block" onclick="confirmResetAll()">
+          🗑️ أرشفة الجرد الحالي وبدء جرد جديد فارغ
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+       شريط التنقل السفلي الاحترافي (Bottom Navigation Bar)
+       ======================================================================== -->
+  <nav class="bottom-nav no-print" aria-label="التنقل الرئيسي">
+    <button type="button" class="nav-item active" data-tab="count" onclick="switchTab('count')">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">الجرد</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="reports" onclick="switchTab('reports')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">التقارير</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="history" onclick="switchTab('history')">
+      <span class="nav-icon">🗂️</span>
+      <span class="nav-label">السجل (<span id="historyCountBadge">0</span>)</span>
+    </button>
+    <button type="button" class="nav-item" data-tab="settings" onclick="switchTab('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">الإعدادات</span>
+    </button>
+  </nav>
+
+  <!-- حاوية الطباعة A4 -->
+  <div id="printArea" class="print-only"></div>
+
+  <!-- ========================================================================
+       النوافذ المنبثقة (Modals)
+       ======================================================================== -->
+  <div class="modal-backdrop no-print" id="columnMappingModal">
+    <div class="modal-card">
+      <h3 class="modal-title">⚙️ ضبط أعمدة ملف السيستم</h3>
+      <div class="form-group">
+        <label class="field-label" for="mapCodeCol">عمود كود الموديل *</label>
+        <select id="mapCodeCol"></select>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="mapFactoryCol">عمود اسم المصنع *</label>
+        <select id="mapFactoryCol"></select>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="mapQtyCol">عمود كمية السيستم *</label>
+        <select id="mapQtyCol"></select>
+      </div>
+
+      <div id="duplicateOptionBox" class="alert-box" style="display:none;">
+        <strong id="duplicateMsg">تم اكتشاف أكواد مكررة!</strong>
+        <label class="radio-row">
+          <input type="radio" name="dupAction" value="merge" checked /> دمج المكرر (جمع كميات السيستم)
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="dupAction" value="keep" /> إبقاء كل صف كصنف منفصل
+        </label>
+      </div>
+
+      <div class="grid-2">
+        <button type="button" class="btn btn-primary" onclick="confirmImportMapping()">✅ استيراد البيانات</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('columnMappingModal')">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop no-print" id="addManualModal">
+    <div class="modal-card">
+      <h3 class="modal-title">➕ إضافة صنف غير موجود بالسيستم</h3>
+      <div class="form-group">
+        <label class="field-label" for="manualCodeInput">كود الموديل *</label>
+        <input type="text" id="manualCodeInput" dir="ltr" placeholder="مثال: PKG-205" />
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="manualFactoryInput">اسم المصنع *</label>
+        <input type="text" id="manualFactoryInput" list="factoriesDatalist" placeholder="اختر أو اكتب اسم المصنع" />
+        <datalist id="factoriesDatalist"></datalist>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="manualActualInput">الكمية الفعلية الموجودة بالمخزن *</label>
+        <input type="text" inputmode="decimal" id="manualActualInput" placeholder="0" />
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="manualNoteInput">ملحوظة (اختياري)</label>
+        <input type="text" id="manualNoteInput" placeholder="مثال: عبوات جديدة بدون كارت" />
+      </div>
+      <div class="grid-2">
+        <button type="button" class="btn btn-primary" onclick="saveManualItem()">💾 حفظ الصنف</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addManualModal')">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop no-print" id="scannerModal">
+    <div class="modal-card">
+      <h3 class="modal-title">📷 مسح باركود الصنف</h3>
+      <p id="scannerStatusText" class="section-desc">وجّه الكاميرا نحو الباركود...</p>
+      <div id="scannerRegion">
+        <video id="nativeVideo" playsinline muted></video>
+        <div id="html5QrReader" style="width:100%;"></div>
+      </div>
+      <button type="button" class="btn btn-danger btn-block" style="margin-top:12px;" onclick="stopBarcodeScanner()">
+        إغلاق الكاميرا
+      </button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast no-print"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

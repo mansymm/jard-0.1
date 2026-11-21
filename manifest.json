@@ -1,0 +1,11 @@
+{
+  "name": "جرد المخزون الاحترافي",
+  "short_name": "جرد المخزون",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f766e",
+  "theme_color": "#0f766e",
+  "dir": "rtl",
+  "lang": "ar"
+}

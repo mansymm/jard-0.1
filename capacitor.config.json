@@ -1,0 +1,9 @@
+{
+  "appId": "com.factory.inventory.app",
+  "appName": "جرد المخزون",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true
+  }
+}
