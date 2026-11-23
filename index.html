@@ -8,6 +8,8 @@
   <title>جرد المخزون الاحترافي</title>
 
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 
   <!-- مكتبات Excel والباركود بنسخ ثابتة من cdnjs -->
@@ -16,9 +18,7 @@
 </head>
 <body>
 
-  <!-- ========================================================================
-       الهيدر العلوي الموحد (خفيف ومرتب)
-       ======================================================================== -->
+  <!-- الهيدر العلوي الموحد -->
   <header class="app-header no-print">
     <div class="header-top">
       <div class="brand-area">
@@ -60,16 +60,11 @@
     </div>
   </header>
 
-  <!-- ========================================================================
-       المحتوى الرئيسي المقسم إلى 4 تبويبات (Sections)
-       ======================================================================== -->
+  <!-- المحتوى الرئيسي المقسم إلى 4 تبويبات -->
   <main class="main-viewport no-print">
 
-    <!-- ======================================================================
-         التبويب 1: شاشة الجرد اليومي (Count Tab)
-         ====================================================================== -->
+    <!-- التبويب 1: شاشة الجرد اليومي -->
     <section id="tab-count" class="tab-view active">
-      <!-- شريط البحث والباركود -->
       <div class="search-bar-card">
         <div class="search-input-group">
           <input type="text" id="searchInput" placeholder="🔍 ابحث بكود الموديل..." autocomplete="off" />
@@ -78,7 +73,6 @@
           </button>
         </div>
 
-        <!-- فلاتر الحالة الأفقية -->
         <div class="chips-row" id="statusFilterGroup">
           <button type="button" class="chip active" data-status="all">الكل</button>
           <button type="button" class="chip" data-status="uncounted">لم يُجرد</button>
@@ -86,7 +80,6 @@
           <button type="button" class="chip" data-status="match">مطابق</button>
         </div>
 
-        <!-- فلتر المصنع والترتيب -->
         <div class="grid-2">
           <select id="factoryFilter" aria-label="فلتر المصنع">
             <option value="all">🏭 كل المصانع</option>
@@ -100,7 +93,6 @@
         </div>
       </div>
 
-      <!-- قائمة كروت الأصناف -->
       <div id="itemsContainer" class="items-list"></div>
 
       <div id="loadMoreWrap" class="load-more-box" style="display:none;">
@@ -109,17 +101,13 @@
         </button>
       </div>
 
-      <!-- زر عائم لإضافة صنف غير موجود بالسيستم -->
       <button type="button" class="fab-add" onclick="openModal('addManualModal')" title="إضافة صنف يدوي">
         ➕ صنف جديد
       </button>
     </section>
 
-    <!-- ======================================================================
-         التبويب 2: شاشة التقارير والطباعة (Reports Tab)
-         ====================================================================== -->
+    <!-- التبويب 2: شاشة التقارير والطباعة -->
     <section id="tab-reports" class="tab-view">
-      <!-- بطاقة الطباعة A4 -->
       <div class="card-section">
         <div class="card-section-title">🖨️ الطباعة المباشرة على ورق A4</div>
         <p class="section-desc">طباعة كشف رسمي منسق مع ترويسة المكتب وأرقام الفواتير وخانات التوقيع.</p>
@@ -133,10 +121,9 @@
         </div>
       </div>
 
-      <!-- بطاقة تصدير Excel -->
       <div class="card-section">
         <div class="card-section-title">📊 استخراج ملفات Excel احترافية</div>
-        <p class="section-desc">ملفات إكسل من اليمين لليسار مع تلوين العجز والزيادة وتجميد العناوين.</p>
+        <p class="section-desc">ملفات إكسل من اليمين لليسار مع تلوين العجز والزيادة وتجميد العناوين (تعمل في المتصفح وداخل التطبيق).</p>
         <div class="stack-gap">
           <button type="button" class="btn btn-primary btn-block" onclick="exportMainExcelReport(false)">
             📥 تحميل تقرير Excel الكامل (4 شيتات)
@@ -164,16 +151,13 @@
         </div>
       </div>
 
-      <!-- بطاقة نسبة إنجاز كل مصنع -->
       <div class="card-section">
         <div class="card-section-title">🏭 متابعة إنجاز المصانع</div>
         <div id="factoryProgressContainer" class="factory-progress-list"></div>
       </div>
     </section>
 
-    <!-- ======================================================================
-         التبويب 3: شاشة سجل الجرود السابقة (History Tab)
-         ====================================================================== -->
+    <!-- التبويب 3: شاشة سجل الجرود السابقة -->
     <section id="tab-history" class="tab-view">
       <div class="card-section">
         <div class="card-section-header-row">
@@ -190,18 +174,14 @@
       <div id="historyListContainer" class="history-list"></div>
     </section>
 
-    <!-- ======================================================================
-         التبويب 4: شاشة الإعدادات والبيانات (Settings Tab)
-         ====================================================================== -->
+    <!-- التبويب 4: شاشة الإعدادات والبيانات -->
     <section id="tab-settings" class="tab-view">
-      <!-- 1. استيراد ملف جديد -->
       <div class="card-section">
         <div class="card-section-title">📥 استيراد جرد السيستم (Excel / CSV)</div>
         <p class="section-desc">ارفع ملف السيستم وسيتم أرشفة الجرد الحالي تلقائياً في السجل.</p>
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
       </div>
 
-      <!-- 2. بيانات الجرد والفواتير -->
       <div class="card-section">
         <div class="card-section-title">🧾 بيانات الجرد وأرقام الفواتير</div>
         <div class="form-group">
@@ -238,7 +218,6 @@
         </div>
       </div>
 
-      <!-- 3. تخصيص المكتب والمصنع وتفضيلات الجرد -->
       <div class="card-section">
         <div class="card-section-title">🏢 تخصيص المكتب وتفضيلات الجرد</div>
         <div class="form-group">
@@ -262,7 +241,6 @@
         </label>
       </div>
 
-      <!-- 4. النسخ الاحتياطي وإعادة الضبط -->
       <div class="card-section">
         <div class="card-section-title">💾 النسخ الاحتياطي وإدارة البيانات</div>
         <div class="grid-2" style="margin-bottom:10px;">
@@ -283,9 +261,7 @@
 
   </main>
 
-  <!-- ========================================================================
-       شريط التنقل السفلي الاحترافي (Bottom Navigation Bar)
-       ======================================================================== -->
+  <!-- شريط التنقل السفلي -->
   <nav class="bottom-nav no-print" aria-label="التنقل الرئيسي">
     <button type="button" class="nav-item active" data-tab="count" onclick="switchTab('count')">
       <span class="nav-icon">📦</span>
@@ -308,9 +284,7 @@
   <!-- حاوية الطباعة A4 -->
   <div id="printArea" class="print-only"></div>
 
-  <!-- ========================================================================
-       النوافذ المنبثقة (Modals)
-       ======================================================================== -->
+  <!-- النوافذ المنبثقة -->
   <div class="modal-backdrop no-print" id="columnMappingModal">
     <div class="modal-card">
       <h3 class="modal-title">⚙️ ضبط أعمدة ملف السيستم</h3>

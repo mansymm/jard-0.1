@@ -3,14 +3,12 @@ const HISTORY_STORAGE_KEY = 'factory_inventory_history_v3';
 const SETTINGS_STORAGE_KEY = 'factory_inventory_settings_v3';
 const BATCH_SIZE = 60;
 
-// إعدادات التطبيق الدائمة
 let appSettings = {
   companyName: '',
   outlierThreshold: 50,
   vibrate: true
 };
 
-// الحالة النشطة للجرد الحالي
 let appState = {
   id: 'inv_' + Date.now(),
   items: [],
@@ -57,26 +55,23 @@ function triggerHaptic(ms = 35) {
 }
 
 /* ==========================================================================
-   1. التنقل بين الأقسام (Tabs)
+   1. التنقل بين الأقسام
    ========================================================================== */
 function switchTab(tabName) {
   uiState.activeTab = tabName;
-
   document.querySelectorAll('.tab-view').forEach(el => {
     el.classList.toggle('active', el.id === 'tab-' + tabName);
   });
-
   document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
-
   if (tabName === 'history') renderHistoryList();
   if (tabName === 'reports') updateStatsAndProgress();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /* ==========================================================================
-   2. التخزين المحلي (الجرد النشط + السجل + الإعدادات)
+   2. التخزين المحلي
    ========================================================================== */
 function saveActiveState() {
   try {
@@ -104,9 +99,7 @@ function saveSettingsState() {
 function loadAllStorage() {
   try {
     const rawSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (rawSettings) {
-      appSettings = { ...appSettings, ...JSON.parse(rawSettings) };
-    }
+    if (rawSettings) appSettings = { ...appSettings, ...JSON.parse(rawSettings) };
   } catch (_) {}
 
   try {
@@ -140,16 +133,13 @@ function updateHistoryBadge() {
 }
 
 /* ==========================================================================
-   3. سجل الجرود (History Archive & Restore)
+   3. سجل الجرود
    ========================================================================== */
 function archiveInventorySnapshot(snapshotObj, autoReason = '') {
-  if (!snapshotObj || !Array.isArray(snapshotObj.items) || snapshotObj.items.length === 0) {
-    return false;
-  }
+  if (!snapshotObj || !Array.isArray(snapshotObj.items) || snapshotObj.items.length === 0) return false;
 
   const total = snapshotObj.items.length;
-  let counted = 0;
-  let diffs = 0;
+  let counted = 0, diffs = 0;
   snapshotObj.items.forEach(itm => {
     const st = getItemStatus(itm);
     if (st.key !== 'uncounted') counted++;
@@ -169,21 +159,15 @@ function archiveInventorySnapshot(snapshotObj, autoReason = '') {
   };
 
   const existingIdx = historyList.findIndex(h => h.data?.id === snapshotObj.id);
-  if (existingIdx !== -1) {
-    historyList[existingIdx] = historyEntry;
-  } else {
-    historyList.unshift(historyEntry);
-  }
+  if (existingIdx !== -1) historyList[existingIdx] = historyEntry;
+  else historyList.unshift(historyEntry);
 
   saveHistoryState();
   return true;
 }
 
 function archiveCurrentInventoryManual() {
-  if (appState.items.length === 0) {
-    alert('لا يوجد جرد حالي لحفظه في السجل.');
-    return;
-  }
+  if (appState.items.length === 0) return alert('لا يوجد جرد حالي لحفظه في السجل.');
   const customName = prompt(
     'أدخل اسماً مميزاً لحفظ هذا الجرد في السجل:',
     appState.meta.title || `جرد ${appState.meta.date}`
@@ -219,18 +203,10 @@ function renderHistoryList() {
         الفروقات: <strong class="text-warning">${entry.summary.diffs}</strong>
       </div>
       <div class="history-actions">
-        <button type="button" class="btn btn-primary btn-sm" onclick="restoreFromHistory(${idx})">
-          🔄 فتح
-        </button>
-        <button type="button" class="btn btn-accent btn-sm" onclick="printHistoryA4(${idx})">
-          🖨️ A4
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="exportHistoryExcel(${idx})">
-          📊 Excel
-        </button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="deleteHistoryEntry(${idx})">
-          🗑️ حذف
-        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="restoreFromHistory(${idx})">🔄 فتح</button>
+        <button type="button" class="btn btn-accent btn-sm" onclick="printHistoryA4(${idx})">🖨️ A4</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="exportHistoryExcel(${idx})">📊 Excel</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteHistoryEntry(${idx})">🗑️ حذف</button>
       </div>
     </div>
   `).join('');
@@ -507,7 +483,7 @@ function confirmImportMapping() {
 }
 
 /* ==========================================================================
-   6. التعديل السريع على الأصناف (+ / - / مطابقة / إدخال) والتراجع
+   6. التعديل السريع على الأصناف والتراجع
    ========================================================================== */
 function pushUndoSnapshot() {
   try {
@@ -780,8 +756,7 @@ function loadMoreItems() {
 
 function updateStatsAndProgress() {
   const total = appState.items.length;
-  let counted = 0;
-  let diffCount = 0;
+  let counted = 0, diffCount = 0;
   const factoryMap = new Map();
 
   appState.items.forEach(item => {
@@ -812,14 +787,12 @@ function updateStatsAndProgress() {
     return `<option value="${escapeHtml(f)}">${escapeHtml(f)} (${fPct}%)</option>`;
   }).join('');
 
-  // تحديث فلتر المصنع في شاشة الجرد
   const factorySelect = document.getElementById('factoryFilter');
   const currentVal = uiState.factory;
   factorySelect.innerHTML = `<option value="all">🏭 كل المصانع (${factories.length})</option>` + optionsHtml;
   if (factories.includes(currentVal)) factorySelect.value = currentVal;
   else { uiState.factory = 'all'; factorySelect.value = 'all'; }
 
-  // تحديث قائمة المصانع في شاشة التقارير
   const reportFactorySelect = document.getElementById('reportFactorySelect');
   const prevRepVal = reportFactorySelect.value;
   reportFactorySelect.innerHTML = `<option value="all">اختر المصنع للتصدير...</option>` + optionsHtml;
@@ -829,7 +802,6 @@ function updateStatsAndProgress() {
   document.getElementById('factoriesDatalist').innerHTML =
     factories.map(f => `<option value="${escapeHtml(f)}">`).join('');
 
-  // تحديث بطاقات إنجاز المصانع في تبويب التقارير
   const fpContainer = document.getElementById('factoryProgressContainer');
   fpContainer.innerHTML = factories.length === 0
     ? '<p class="section-desc" style="text-align:center;">لا توجد مصانع محمّلة بعد.</p>'
@@ -876,19 +848,14 @@ function generateAndTriggerA4Print(stateObj, mode = 'all', selectedFactory = 'al
     targetItems = targetItems.filter(x => ['surplus', 'shortage'].includes(getItemStatus(x).key));
   }
 
-  if (targetItems.length === 0) {
-    alert('لا توجد أصناف مطابقة لخيار الطباعة المحدد.');
-    return;
-  }
+  if (targetItems.length === 0) return alert('لا توجد أصناف مطابقة لخيار الطباعة المحدد.');
 
   const m = stateObj.meta || {};
   const companyHeader = appSettings.companyName ? `<div class="a4-company">${escapeHtml(appSettings.companyName)}</div>` : '';
   const reportTitle = (m.title || 'تقرير جرد المخزون') + (mode === 'diff' ? ' (كشف الفروقات فقط)' : '');
   const dateDisplay = m.includeDate ? (m.date || getTodayLocalISO()) : '—';
 
-  let totalSys = 0;
-  let totalAct = 0;
-  let diffCount = 0;
+  let totalSys = 0, totalAct = 0, diffCount = 0;
 
   const rowsHtml = targetItems.map((item, idx) => {
     const st = getItemStatus(item);
@@ -993,7 +960,7 @@ function copyWhatsAppSummary() {
 }
 
 /* ==========================================================================
-   9. تصدير تقارير Excel (SheetJS)
+   9. تصدير تقارير Excel والملفات (متوافق مع المتصفح و Capacitor Android APK)
    ========================================================================== */
 function buildInventorySheet(itemsList) {
   const headers = ['كود الموديل', 'المصنع', 'كمية السيستم', 'الكمية الفعلية', 'الفرق', 'الحالة', 'الملحوظات'];
@@ -1078,10 +1045,31 @@ function sanitizeSheetName(rawName, usedNamesSet) {
   return finalName;
 }
 
-function downloadWorkbookAsBlob(wb, filename) {
-  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
+// دالة موحدة لتنزيل الملفات تعمل في المتصفح العادي وداخل تطبيق Android APK
+async function saveOrShareFile(base64Data, blobObj, filename) {
+  try {
+    // إذا كان التطبيق يعمل داخل Capacitor APK وتتوفر إضافتا Filesystem و Share
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      const { Filesystem, Share } = window.Capacitor.Plugins || {};
+      if (Filesystem && Share) {
+        const res = await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: 'CACHE'
+        });
+        await Share.share({
+          title: filename,
+          url: res.uri
+        });
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Capacitor native share fallback:', e);
+  }
+
+  // التنزيل القياسي في المتصفح
+  const url = URL.createObjectURL(blobObj);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -1090,7 +1078,14 @@ function downloadWorkbookAsBlob(wb, filename) {
   setTimeout(() => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, 500);
+  }, 600);
+}
+
+function downloadWorkbookAsBlob(wb, filename) {
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+  const base64Str = XLSX.write(wb, { bookType: 'xlsx', type: 'base64', cellStyles: true });
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveOrShareFile(base64Str, blob, filename);
 }
 
 function exportMainExcelReport(onlySelectedFactory) {
@@ -1128,7 +1123,7 @@ function buildAndDownloadFullExcel(stateObj, onlySelectedFactory, selectedFactor
 
   const dateStr = stateObj.meta?.date || getTodayLocalISO();
   downloadWorkbookAsBlob(wb, `تقرير_جرد${fileFactoryPart}_${dateStr}.xlsx`);
-  showToast('📥 تم تحميل ملف Excel بنجاح');
+  showToast('📥 تم تجهيز ملف Excel');
 }
 
 function exportPerFactoryExcel() {
@@ -1155,7 +1150,7 @@ function exportPerFactoryExcel() {
 
   const dateStr = appState.meta?.date || getTodayLocalISO();
   downloadWorkbookAsBlob(wb, `جرد_المصانع_تفصيلي_${dateStr}.xlsx`);
-  showToast('📑 تم تحميل ملف شيتات المصانع');
+  showToast('📑 تم تجهيز ملف شيتات المصانع');
 }
 
 /* ==========================================================================
@@ -1170,18 +1165,11 @@ function exportFullBackupJSON() {
     history: historyList
   };
   const dateStr = appState.meta.date || getTodayLocalISO();
-  const blob = new Blob([JSON.stringify(fullPayload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `نسخة_احتياطية_جرد_وسجل_${dateStr}.json`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 500);
-  showToast('💾 تم تصدير النسخة الاحتياطية الشاملة');
+  const jsonStr = JSON.stringify(fullPayload, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const base64Str = btoa(unescape(encodeURIComponent(jsonStr)));
+  saveOrShareFile(base64Str, blob, `نسخة_احتياطية_جرد_وسجل_${dateStr}.json`);
+  showToast('💾 تم تجهيز النسخة الاحتياطية');
 }
 
 document.getElementById('backupInput').addEventListener('change', function (e) {
@@ -1383,7 +1371,6 @@ function syncMetaInputs() {
   document.getElementById('invSales').value = appState.meta.sales || '';
   document.getElementById('invSalesReturn').value = appState.meta.salesReturn || '';
 
-  // مزامنة الإعدادات وعنوان الهيدر
   document.getElementById('settingCompanyName').value = appSettings.companyName || '';
   document.getElementById('settingOutlierThreshold').value = String(appSettings.outlierThreshold ?? 50);
   document.getElementById('settingVibrate').checked = !!appSettings.vibrate;
@@ -1411,7 +1398,6 @@ function setupEventListeners() {
     });
   });
 
-  // مستمعو الإعدادات
   document.getElementById('settingCompanyName').addEventListener('input', (e) => {
     appSettings.companyName = e.target.value;
     saveSettingsState();
@@ -1466,7 +1452,6 @@ window.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   refreshAllUI();
 
-  // إذا لم يكن هناك أصناف محمّلة بعد، افتح تبويب الإعدادات مباشرة لتسهيل الرفع
   if (appState.items.length === 0) {
     switchTab('settings');
   }

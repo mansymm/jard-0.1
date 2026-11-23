@@ -1,10 +1,12 @@
-const CACHE_NAME = 'inventory-app-cache-v3';
+const CACHE_NAME = 'inventory-app-cache-v4';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'
 ];
